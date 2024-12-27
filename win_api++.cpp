@@ -28,7 +28,7 @@ template <typename Fn>
 struct Defer final
 {
     Defer(Fn fn) noexcept
-        : fn(fn)
+        : fn(std::move(fn))
     {
     }
 
