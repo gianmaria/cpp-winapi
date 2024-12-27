@@ -70,12 +70,24 @@ struct Error
     }
 };
 
-template<typename ResType, typename ErrType>
+
+
+template<typename ResType, typename Err>
 struct Result
 {
     Result(const ResType& res,
-           const Error<ErrType>& err) :
+           const Err& err) :
         res(res), err(err)
+    {
+    }
+
+    Result(const ResType& res) :
+        res(res), err({})
+    {
+    }
+
+    Result(const Err& err) :
+        res({}), err(err)
     {
     }
 
@@ -95,14 +107,14 @@ struct Result
         return res;
     }
 
-    const Error<ErrType>& error() const
+    const Err& error() const
     {
         return err;
     }
 
 private:
     ResType res;
-    Error<ErrType> err;
+    Err err;
 };
 
 namespace Util
@@ -118,7 +130,7 @@ string toHexString(const ByteBuffer& data);
 
 ByteBuffer randomBytes(uint32_t count);
 
-using Base64Result = Result<ByteBuffer, DWORD>;
+using Base64Result = Result<ByteBuffer, Error<DWORD>>;
 
 Base64Result base64Encode(const BYTE* input, DWORD input_size);
 Base64Result base64Encode(const ByteBuffer& input);
@@ -132,16 +144,16 @@ Base64Result base64Decode(const string& input);
 Base64Result base64Decode(const string_view& input);
 Base64Result base64Decode(const char* input);
 
-using CompressionError = Result<ByteBuffer, DWORD>;
-CompressionError compress(LPCVOID data, SIZE_T data_size);
-CompressionError decompress(LPCVOID data, SIZE_T data_size);
+using CompressionResult = Result<ByteBuffer, Error<DWORD>>;
+CompressionResult compress(LPCVOID data, SIZE_T data_size);
+CompressionResult decompress(LPCVOID data, SIZE_T data_size);
 
 } // Util namespace
 
 namespace SHA256
 {
 
-using SHA256Result = Result<ByteBuffer, NTSTATUS>;
+using SHA256Result = Result<ByteBuffer, Error<NTSTATUS>>;
 
 SHA256Result generate(PUCHAR data, ULONG data_size);
 SHA256Result generate(const ByteBuffer& input);
@@ -170,7 +182,7 @@ struct Encryption
     ByteBuffer additional_data;
 };
 
-using EncryptionResult = Result<Encryption, NTSTATUS>;
+using EncryptionResult = Result<Encryption, Error<NTSTATUS>>;
 
 EncryptionResult encrypt(
     PUCHAR plaintext, ULONG plaintext_size,
@@ -209,7 +221,7 @@ struct Decryption
 
 };
 
-using DecryptionResult = Result<Decryption, NTSTATUS>;
+using DecryptionResult = Result<Decryption, Error<NTSTATUS>>;
 
 DecryptionResult decrypt(
     PUCHAR ciphertext, ULONG ciphertext_size,
@@ -512,8 +524,7 @@ Base64Result base64Encode(const BYTE* input, DWORD input_size)
         DWORD last_err = GetLastError();
 
         return Base64Result(
-            {},
-            Error<DWORD>{.description = lastErrorToStr(last_err), .code = last_err}
+            {.description = lastErrorToStr(last_err), .code = last_err}
         );
     }
 
@@ -536,18 +547,15 @@ Base64Result base64Encode(const BYTE* input, DWORD input_size)
     {
         DWORD last_err = GetLastError();
         return Base64Result(
-            {},
-            Error<DWORD>{.description = lastErrorToStr(last_err), .code = last_err}
+            {.description = lastErrorToStr(last_err), .code = last_err}
         );
     }
 
     output.pop_back(); // remove terminating null character
 
-    return Base64Result(
-        std::move(output),
-        {}
-    );
+    return Base64Result(std::move(output));
 }
+
 Base64Result base64Encode(const ByteBuffer& input)
 {
     return base64Encode(
@@ -597,8 +605,7 @@ Base64Result base64Decode(LPCSTR input, DWORD input_size)
     {
         DWORD last_err = GetLastError();
         return Base64Result(
-            {},
-            Error<DWORD>{.description = lastErrorToStr(last_err), .code = last_err}
+            {.description = lastErrorToStr(last_err), .code = last_err}
         );
     }
 
@@ -620,16 +627,13 @@ Base64Result base64Decode(LPCSTR input, DWORD input_size)
     {
         DWORD last_err = GetLastError();
         return Base64Result(
-            {},
-            Error<DWORD>{.description = lastErrorToStr(last_err), .code = last_err}
+            {.description = lastErrorToStr(last_err), .code = last_err}
         );
     }
 
-    return Base64Result(
-        std::move(output),
-        {}
-    );
+    return Base64Result(std::move(output));
 }
+
 Base64Result base64Decode(const ByteBuffer& input)
 {
     return base64Decode(
@@ -660,7 +664,7 @@ Base64Result base64Decode(const char* input)
 }
 
 
-CompressionError compress(LPCVOID data, SIZE_T data_size)
+CompressionResult compress(LPCVOID data, SIZE_T data_size)
 {
     DWORD error_code = 0;
     COMPRESSOR_HANDLE handle = nullptr;
@@ -675,13 +679,9 @@ CompressionError compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        return CompressionError {
-            {},
-            {
-                format("CreateCompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
-                error_code
-            }
-        };
+        return CompressionResult(
+            {.description = lastErrorToStr(error_code), .code = error_code}
+        );
     }
 
     Defer close_compressor = [handle]()
@@ -705,13 +705,9 @@ CompressionError compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE and
         error_code != ERROR_INSUFFICIENT_BUFFER)
     {
-        return CompressionError {
-            {},
-            {
-                format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-                error_code
-            }
-        };
+        return CompressionResult(
+            {.description = lastErrorToStr(error_code), .code = error_code}
+        );
     }
 
     auto compressed_data = ByteBuffer(size_needed);
@@ -729,24 +725,17 @@ CompressionError compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        return CompressionError {
-            {},
-            {
-                format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-                error_code
-            }
-        };
+        return CompressionResult(
+            {.description = lastErrorToStr(error_code), .code = error_code}
+        );
     }
 
     compressed_data.resize(actual_compressed_size);
 
-    return CompressionError {
-        {compressed_data},
-        {}
-    };
+    return CompressionResult(compressed_data);
 }
 
-CompressionError decompress(LPCVOID data, SIZE_T data_size)
+CompressionResult decompress(LPCVOID data, SIZE_T data_size)
 {
     DWORD error_code = 0;
     DECOMPRESSOR_HANDLE handle = nullptr;
@@ -761,13 +750,9 @@ CompressionError decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        return CompressionError {
-            {},
-            {
-                format("CreateDecompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
-                error_code
-            }
-        };
+        return CompressionResult(
+            {.description = lastErrorToStr(error_code), .code = error_code}
+        );
     }
 
     Defer close_decompressor = [handle]()
@@ -791,13 +776,9 @@ CompressionError decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE and
         error_code != ERROR_INSUFFICIENT_BUFFER)
     {
-        return CompressionError {
-            {},
-            {
-                format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-                error_code
-            }
-        };
+        return CompressionResult(
+            {.description = lastErrorToStr(error_code), .code = error_code}
+        );
     }
 
     auto uncompressed_data = ByteBuffer(uncompressed_data_size);
@@ -814,21 +795,14 @@ CompressionError decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        return CompressionError {
-            {},
-            {
-                format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-                error_code
-            }
-        };
+        return CompressionResult(
+            {.description = lastErrorToStr(error_code), .code = error_code}
+        );
     }
 
     uncompressed_data.resize(uncompressed_data_size);
 
-    return CompressionError {
-        {uncompressed_data},
-        {}
-    };
+    return CompressionResult(uncompressed_data);
 }
 
 } // Util namespace
@@ -851,7 +825,6 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     if (status != STATUS_SUCCESS)
     {
         return SHA256Result(
-            {},
             {.description = ntstatusToStr(status), .code = status}
         );
     }
@@ -877,7 +850,6 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     if (status != STATUS_SUCCESS)
     {
         return SHA256Result(
-            {},
             {.description = ntstatusToStr(status), .code = status}
         );
     }
@@ -899,7 +871,6 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     if (status != STATUS_SUCCESS)
     {
         return SHA256Result(
-            {},
             {.description = ntstatusToStr(status), .code = status}
         );
     }
@@ -922,7 +893,6 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     if (status != STATUS_SUCCESS)
     {
         return SHA256Result(
-            {},
             {.description = ntstatusToStr(status), .code = status}
         );
     }
@@ -943,7 +913,6 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     if (status != STATUS_SUCCESS)
     {
         return SHA256Result(
-            {},
             {.description = ntstatusToStr(status), .code = status}
         );
     }
@@ -959,7 +928,6 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     if (status != STATUS_SUCCESS)
     {
         return SHA256Result(
-            {},
             {.description = ntstatusToStr(status), .code = status}
         );
     }
@@ -1178,7 +1146,6 @@ EncryptionResult encrypt(
         if (PBKDF2_status != STATUS_SUCCESS)
         {
             return EncryptionResult(
-                {},
                 {.description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status}
             );
         }
@@ -1211,7 +1178,6 @@ EncryptionResult encrypt(
         if (common_status != STATUS_SUCCESS)
         {
             return EncryptionResult(
-                {},
                 {.description = ntstatusToStr(common_status), .code = common_status}
             );
         }
@@ -1247,7 +1213,6 @@ EncryptionResult encrypt(
             bytes_copied != plaintext_size)
         {
             return EncryptionResult(
-                {},
                 {.description = ntstatusToStr(encrypt_status), .code = encrypt_status}
             );
         }
@@ -1260,8 +1225,7 @@ EncryptionResult encrypt(
             .tag = tag,
             .salt = salt,
             .additional_data = ByteBuffer(additional_data, additional_data + additional_data_size)
-        },
-        {}
+        }
     );
 }
 
@@ -1344,7 +1308,6 @@ DecryptionResult decrypt(
         if (PBKDF2_status != STATUS_SUCCESS)
         {
             return DecryptionResult(
-                {},
                 {.description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status}
             );
         }
@@ -1375,7 +1338,6 @@ DecryptionResult decrypt(
         if (common_status != STATUS_SUCCESS)
         {
             return DecryptionResult(
-                {},
                 {.description = ntstatusToStr(common_status), .code = common_status}
             );
         }
@@ -1411,15 +1373,13 @@ DecryptionResult decrypt(
             bytes_copied != plaintext.size())
         {
             return DecryptionResult(
-                {},
                 {.description = ntstatusToStr(decrypt_status), .code = decrypt_status}
             );
         }
     }
 
     return DecryptionResult(
-        {.plaintext = plaintext},
-        {}
+        {.plaintext = plaintext}
     );
 }
 
