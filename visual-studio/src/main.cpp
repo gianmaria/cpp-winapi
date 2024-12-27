@@ -577,7 +577,7 @@ int main()
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "[EXCEPTION]: " << ex.what() << endl;
+        std::cerr << "[EXCEPTION] " << ex.what() << endl;
     }
 
     return 1;

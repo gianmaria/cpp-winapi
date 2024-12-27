@@ -70,7 +70,7 @@ struct Error
     }
 };
 
-class UnwrapException: std::exception
+class UnwrapException: public std::exception
 {
 public:
     explicit UnwrapException(char const* const message) noexcept
