@@ -540,9 +540,9 @@ bool testCompression()
     auto data_size = strlen(data);
 
     auto compressed = WAPP::Util::compress(data, data_size);
-    auto decompressed = WAPP::Util::decompress(compressed.data(), compressed.size());
+    auto decompressed = WAPP::Util::decompress(compressed.unwrap().data(), compressed.unwrap().size());
 
-    return (memcmp(data, decompressed.data(), data_size) == 0);
+    return (memcmp(data, decompressed.unwrap().data(), data_size) == 0);
 }
 
 bool testCompressionFile()
@@ -550,12 +550,12 @@ bool testCompressionFile()
     auto file_content = readEntireFile("C:\\Windows\\System32\\calc.exe");
 
     auto compressed = WAPP::Util::compress(file_content.data(), file_content.size());
-    auto decompressed = WAPP::Util::decompress(compressed.data(), compressed.size());
+    auto decompressed = WAPP::Util::decompress(compressed.unwrap().data(), compressed.unwrap().size());
 
-    if (file_content.size() != decompressed.size())
+    if (file_content.size() != decompressed.unwrap().size())
         return false;
 
-    return (memcmp(file_content.data(), decompressed.data(), decompressed.size()) == 0);
+    return (memcmp(file_content.data(), decompressed.unwrap().data(), decompressed.unwrap().size()) == 0);
 }
 
 int main()

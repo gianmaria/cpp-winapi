@@ -105,30 +105,6 @@ private:
     Error<ErrType> err;
 };
 
-class CompressionError: public std::runtime_error
-{
-public:
-    CompressionError(const string& what, DWORD code)
-        : std::runtime_error(what),
-        code(code)
-    {
-    }
-
-    DWORD code;
-};
-
-class DecompressionError: public std::runtime_error
-{
-public:
-    DecompressionError(const string& what, DWORD code)
-        : std::runtime_error(what),
-        code(code)
-    {
-    }
-
-    DWORD code;
-};
-
 namespace Util
 {
 
@@ -156,8 +132,9 @@ Base64Result base64Decode(const string& input);
 Base64Result base64Decode(const string_view& input);
 Base64Result base64Decode(const char* input);
 
-ByteBuffer compress(LPCVOID data, SIZE_T data_size);
-ByteBuffer decompress(LPCVOID data, SIZE_T data_size);
+using CompressionError = Result<ByteBuffer, DWORD>;
+CompressionError compress(LPCVOID data, SIZE_T data_size);
+CompressionError decompress(LPCVOID data, SIZE_T data_size);
 
 } // Util namespace
 
@@ -683,7 +660,7 @@ Base64Result base64Decode(const char* input)
 }
 
 
-ByteBuffer compress(LPCVOID data, SIZE_T data_size)
+CompressionError compress(LPCVOID data, SIZE_T data_size)
 {
     DWORD error_code = 0;
     COMPRESSOR_HANDLE handle = nullptr;
@@ -698,9 +675,12 @@ ByteBuffer compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw CompressionError {
-            format("CreateCompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
-            error_code
+        return CompressionError {
+            {},
+            {
+                format("CreateCompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
+                error_code
+            }
         };
     }
 
@@ -725,9 +705,12 @@ ByteBuffer compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE and
         error_code != ERROR_INSUFFICIENT_BUFFER)
     {
-        throw CompressionError {
-            format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-            error_code
+        return CompressionError {
+            {},
+            {
+                format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
+                error_code
+            }
         };
     }
 
@@ -746,18 +729,24 @@ ByteBuffer compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw CompressionError {
-            format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-            error_code
+        return CompressionError {
+            {},
+            {
+                format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
+                error_code
+            }
         };
     }
 
     compressed_data.resize(actual_compressed_size);
 
-    return compressed_data;
+    return CompressionError {
+        {compressed_data},
+        {}
+    };
 }
 
-ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
+CompressionError decompress(LPCVOID data, SIZE_T data_size)
 {
     DWORD error_code = 0;
     DECOMPRESSOR_HANDLE handle = nullptr;
@@ -772,9 +761,12 @@ ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw DecompressionError {
-            format("CreateDecompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
-            error_code
+        return CompressionError {
+            {},
+            {
+                format("CreateDecompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
+                error_code
+            }
         };
     }
 
@@ -799,9 +791,12 @@ ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE and
         error_code != ERROR_INSUFFICIENT_BUFFER)
     {
-        throw DecompressionError {
-            format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-            error_code
+        return CompressionError {
+            {},
+            {
+                format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
+                error_code
+            }
         };
     }
 
@@ -819,15 +814,21 @@ ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw DecompressionError {
-            format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
-            error_code
+        return CompressionError {
+            {},
+            {
+                format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
+                error_code
+            }
         };
     }
 
     uncompressed_data.resize(uncompressed_data_size);
 
-    return uncompressed_data;
+    return CompressionError {
+        {uncompressed_data},
+        {}
+    };
 }
 
 } // Util namespace
