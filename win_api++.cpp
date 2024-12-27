@@ -25,18 +25,26 @@ namespace
 using namespace WAPP;
 
 template <typename Fn>
-struct Defer
+struct Defer final
 {
-    Fn fn;
-
-    Defer(Fn fn) : fn(fn)
+    Defer(Fn fn) noexcept
+        : fn(fn)
     {
     }
 
-    ~Defer()
+    ~Defer() noexcept
     {
         fn();
     }
+
+    Defer(const Defer&) noexcept = delete;
+    Defer& operator=(const Defer&) noexcept = delete;
+    Defer(Defer&& other) noexcept = delete;
+    Defer& operator=(Defer&& other) noexcept = delete;
+
+private:
+
+    Fn fn;
 };
 
 // https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55

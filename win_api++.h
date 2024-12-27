@@ -70,7 +70,6 @@ struct Error
     }
 };
 
-
 class UnwrapException: std::exception
 {
 public:
