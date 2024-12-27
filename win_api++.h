@@ -1,7 +1,7 @@
 // This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
-#ifndef WINAPIPP_H
-#define WINAPIPP_H
+#ifndef WAPP_H
+#define WAPP_H
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -49,9 +49,8 @@
     [] fix TODO's in code
 */
 
-namespace WinCppCrypt
+namespace WAPP
 {
-
 using std::string_view;
 using std::string;
 using std::vector;
@@ -92,6 +91,7 @@ struct Result
 
     const ResType& unwrap() const
     {
+        // TODO: exception if is not valid?
         return res;
     }
 
@@ -105,7 +105,7 @@ private:
     Error<ErrType> err;
 };
 
-class CompressionError : public std::runtime_error
+class CompressionError: public std::runtime_error
 {
 public:
     CompressionError(const string& what, DWORD code)
@@ -117,7 +117,7 @@ public:
     DWORD code;
 };
 
-class DecompressionError : public std::runtime_error
+class DecompressionError: public std::runtime_error
 {
 public:
     DecompressionError(const string& what, DWORD code)
@@ -259,12 +259,13 @@ bool writeToFile(const string& filename, const Encryption& data);
 
 } // AES256_GCM namespace
 
-} // WinCppCrypt namespace
 
-#endif // WINAPIPP_H
+} // WAPP namespace
+
+#endif // WAPP_H
 
 
-#ifdef WINAPIPP_IMPLEMENTATION
+#ifdef WAPP_IMPLEMENTATION
 
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
@@ -288,7 +289,21 @@ bool writeToFile(const string& filename, const Encryption& data);
 namespace
 {
 
-using namespace WinCppCrypt;
+using namespace WAPP;
+
+// TODO: new defer class
+//template <typename Fn>
+//struct DeleteLater
+//{
+//    Fn fn;
+//    DeleteLater(Fn fn) : fn(fn)
+//    {
+//    }
+//    ~DeleteLater()
+//    {
+//        fn();
+//    }
+//};
 
 class Defer
 {
@@ -382,7 +397,7 @@ string lastErrorToStr(DWORD error_code)
 
 } // Anonymous namespace
 
-namespace WinCppCrypt
+namespace WAPP
 {
 
 using std::unique_ptr;
@@ -700,7 +715,7 @@ ByteBuffer compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw CompressionError{
+        throw CompressionError {
             format("CreateCompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
             error_code
         };
@@ -727,7 +742,7 @@ ByteBuffer compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE and
         error_code != ERROR_INSUFFICIENT_BUFFER)
     {
-        throw CompressionError{
+        throw CompressionError {
             format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
             error_code
         };
@@ -748,7 +763,7 @@ ByteBuffer compress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw CompressionError{
+        throw CompressionError {
             format("Compress failed ({}): {}", error_code, lastErrorToStr(error_code)),
             error_code
         };
@@ -774,7 +789,7 @@ ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw DecompressionError{
+        throw DecompressionError {
             format("CreateDecompressor failed ({}): {}", error_code, lastErrorToStr(error_code)),
             error_code
         };
@@ -801,7 +816,7 @@ ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE and
         error_code != ERROR_INSUFFICIENT_BUFFER)
     {
-        throw DecompressionError{
+        throw DecompressionError {
             format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
             error_code
         };
@@ -821,7 +836,7 @@ ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
     if (res == FALSE)
     {
         error_code = GetLastError();
-        throw DecompressionError{
+        throw DecompressionError {
             format("Decompress failed ({}): {}", error_code, lastErrorToStr(error_code)),
             error_code
         };
@@ -853,7 +868,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     {
         return SHA256Result(
             {},
-            { .description = ntstatusToStr(status), .code = status }
+            {.description = ntstatusToStr(status), .code = status}
         );
     }
 
@@ -879,7 +894,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     {
         return SHA256Result(
             {},
-            { .description = ntstatusToStr(status), .code = status }
+            {.description = ntstatusToStr(status), .code = status}
         );
     }
 
@@ -901,7 +916,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     {
         return SHA256Result(
             {},
-            { .description = ntstatusToStr(status), .code = status }
+            {.description = ntstatusToStr(status), .code = status}
         );
     }
 
@@ -924,7 +939,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     {
         return SHA256Result(
             {},
-            { .description = ntstatusToStr(status), .code = status }
+            {.description = ntstatusToStr(status), .code = status}
         );
     }
 
@@ -945,7 +960,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     {
         return SHA256Result(
             {},
-            { .description = ntstatusToStr(status), .code = status }
+            {.description = ntstatusToStr(status), .code = status}
         );
     }
 
@@ -961,7 +976,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
     {
         return SHA256Result(
             {},
-            { .description = ntstatusToStr(status), .code = status }
+            {.description = ntstatusToStr(status), .code = status}
         );
     }
 
@@ -1180,7 +1195,7 @@ EncryptionResult encrypt(
         {
             return EncryptionResult(
                 {},
-                { .description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status }
+                {.description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status}
             );
         }
     }
@@ -1191,7 +1206,7 @@ EncryptionResult encrypt(
 
     BCRYPT_ALG_HANDLE algo_handle = nullptr;
     BCRYPT_KEY_HANDLE key_handle = nullptr;
-    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO auth_info{};
+    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO auth_info {};
 
     // common part of AES256-GCM
     {
@@ -1213,7 +1228,7 @@ EncryptionResult encrypt(
         {
             return EncryptionResult(
                 {},
-                { .description = ntstatusToStr(common_status), .code = common_status }
+                {.description = ntstatusToStr(common_status), .code = common_status}
             );
         }
     }
@@ -1249,7 +1264,7 @@ EncryptionResult encrypt(
         {
             return EncryptionResult(
                 {},
-                { .description = ntstatusToStr(encrypt_status), .code = encrypt_status }
+                {.description = ntstatusToStr(encrypt_status), .code = encrypt_status}
             );
         }
     }
@@ -1346,7 +1361,7 @@ DecryptionResult decrypt(
         {
             return DecryptionResult(
                 {},
-                { .description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status }
+                {.description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status}
             );
         }
     }
@@ -1355,7 +1370,7 @@ DecryptionResult decrypt(
 
     BCRYPT_ALG_HANDLE algo_handle = nullptr;
     BCRYPT_KEY_HANDLE key_handle = nullptr;
-    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO auth_info{};
+    BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO auth_info {};
 
     // common part of AES256-GCM
     {
@@ -1377,7 +1392,7 @@ DecryptionResult decrypt(
         {
             return DecryptionResult(
                 {},
-                { .description = ntstatusToStr(common_status), .code = common_status }
+                {.description = ntstatusToStr(common_status), .code = common_status}
             );
         }
     }
@@ -1413,13 +1428,13 @@ DecryptionResult decrypt(
         {
             return DecryptionResult(
                 {},
-                { .description = ntstatusToStr(decrypt_status), .code = decrypt_status }
+                {.description = ntstatusToStr(decrypt_status), .code = decrypt_status}
             );
         }
     }
 
     return DecryptionResult(
-        { .plaintext = plaintext },
+        {.plaintext = plaintext},
         {}
     );
 }
@@ -1473,7 +1488,7 @@ DecryptionResult decrypt(
 
 bool writeToFile(const string& filename, const Encryption& data)
 {
-    using namespace WinCppCrypt::Util;
+    using namespace WAPP::Util;
 
     auto ofs = std::ofstream(filename, std::ios::binary);
 
@@ -1502,6 +1517,6 @@ bool writeToFile(const string& filename, const Encryption& data)
 
 } // AES256_GCM namespace
 
-} // WinCppCrypt namespace
+} // WAPP namespace
 
-#endif // WINAPIPP_IMPLEMENTATION
+#endif // WAPP_IMPLEMENTATION

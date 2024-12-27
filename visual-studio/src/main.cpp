@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include <winapi++.h>
+#include <win_api++.h>
 
 using std::cout;
 using std::cerr;
@@ -32,7 +32,7 @@ using namespace std::string_view_literals;
 namespace fs = std::filesystem;
 
 
-WinCppCrypt::ByteBuffer readEntireFile(string_view file_path)
+WAPP::ByteBuffer readEntireFile(string_view file_path)
 {
     fs::path p1 = file_path;
     // Open file in binary mode
@@ -60,7 +60,7 @@ WinCppCrypt::ByteBuffer readEntireFile(string_view file_path)
 
 bool testEncodeDecodeBase64File()
 {
-    using namespace WinCppCrypt;
+    using namespace WAPP;
     auto file_data = readEntireFile("C:\\Windows\\System32\\calc.exe");
 
     // calculate sha256 file
@@ -88,13 +88,13 @@ bool testEncodeDecodeBase64BinData()
         0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
     };
 
-    auto res_enc = WinCppCrypt::Util::base64Encode(bin_data, sizeof(bin_data));
+    auto res_enc = WAPP::Util::base64Encode(bin_data, sizeof(bin_data));
     if (res_enc.hasError())
     {
         return false;
     }
 
-    auto res_dec = WinCppCrypt::Util::base64Decode(res_enc.unwrap());
+    auto res_dec = WAPP::Util::base64Decode(res_enc.unwrap());
     if (res_dec.hasError())
     {
         return false;
@@ -110,8 +110,8 @@ bool testEncodeDecodeBase64BinData()
 
 bool testEncodeDecodeBase64()
 {
-    using namespace WinCppCrypt;
-    using namespace WinCppCrypt::Util;
+    using namespace WAPP;
+    using namespace WAPP::Util;
 
     auto msg = R"(
 12345
@@ -159,7 +159,7 @@ bool testSHA256()
     {
         size_t len = input.size();
 
-        auto res = WinCppCrypt::ByteBuffer();
+        auto res = WAPP::ByteBuffer();
         res.reserve(len);
 
         std::stringstream ss;
@@ -174,7 +174,7 @@ bool testSHA256()
             ss << std::hex << hex_string;
             ss >> value;
 
-            res.push_back(static_cast<WinCppCrypt::byte>(value));
+            res.push_back(static_cast<WAPP::byte>(value));
 
             ss.clear(), ss.str("");
         }
@@ -182,8 +182,8 @@ bool testSHA256()
         return res;
     };
 
-    using namespace WinCppCrypt;
-    using namespace WinCppCrypt::Util;
+    using namespace WAPP;
+    using namespace WAPP::Util;
 
     struct Hash_Test
     {
@@ -250,8 +250,8 @@ bool testSHA256()
 
 bool testAES()
 {
-    using namespace WinCppCrypt;
-    using namespace WinCppCrypt::Util;
+    using namespace WAPP;
+    using namespace WAPP::Util;
 
     bool res = true;
 
@@ -399,8 +399,8 @@ vector<string_view> split_string(
 
 bool testEncryptFile()
 {
-    using namespace WinCppCrypt;
-    using namespace WinCppCrypt::Util;
+    using namespace WAPP;
+    using namespace WAPP::Util;
 
     auto filename = "C:\\Windows\\System32\\calc.exe";
     auto encrypted_filename = "calc.exe.txt";
@@ -486,8 +486,8 @@ bool testEncryptFile()
 
 bool testUnusualEncryption()
 {
-    using WinCppCrypt::AES256_GCM::encrypt;
-    using WinCppCrypt::AES256_GCM::decrypt;
+    using WAPP::AES256_GCM::encrypt;
+    using WAPP::AES256_GCM::decrypt;
 
     int nums[] = {1, 2, 3, 4, 5};
 
@@ -539,8 +539,8 @@ bool testCompression()
         ;
     auto data_size = strlen(data);
 
-    auto compressed = WinCppCrypt::Util::compress(data, data_size);
-    auto decompressed = WinCppCrypt::Util::decompress(compressed.data(), compressed.size());
+    auto compressed = WAPP::Util::compress(data, data_size);
+    auto decompressed = WAPP::Util::decompress(compressed.data(), compressed.size());
 
     return (memcmp(data, decompressed.data(), data_size) == 0);
 }
@@ -549,8 +549,8 @@ bool testCompressionFile()
 {
     auto file_content = readEntireFile("C:\\Windows\\System32\\calc.exe");
 
-    auto compressed = WinCppCrypt::Util::compress(file_content.data(), file_content.size());
-    auto decompressed = WinCppCrypt::Util::decompress(compressed.data(), compressed.size());
+    auto compressed = WAPP::Util::compress(file_content.data(), file_content.size());
+    auto decompressed = WAPP::Util::decompress(compressed.data(), compressed.size());
 
     if (file_content.size() != decompressed.size())
         return false;

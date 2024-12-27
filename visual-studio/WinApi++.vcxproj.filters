@@ -18,12 +18,12 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\winapi++.cpp">
+    <ClCompile Include="src\win_api++.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\winapi++.h">
+    <ClInclude Include="..\win_api++.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
