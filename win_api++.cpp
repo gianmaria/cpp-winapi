@@ -1,9 +1,9 @@
 #include <win_api++.h>
 
+#include <ntstatus.h>
+
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
-
-#include <ntstatus.h>
 
 #include <wincrypt.h>
 #pragma comment(lib, "Crypt32.lib")
@@ -14,7 +14,7 @@
 #include <memory>
 #include <fstream>
 #include <format>
-#include <functional>
+
 #include <iostream>
 #include <sstream>
 #include <iomanip>
