@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <exception>
 
 
 // TODO list:
@@ -70,6 +71,14 @@ struct Error
 };
 
 
+class UnwrapException: std::exception
+{
+public:
+    explicit UnwrapException(char const* const message) noexcept
+        : std::exception(message)
+    {
+    }
+};
 
 template<typename ResType, typename Err>
 struct Result
@@ -102,8 +111,10 @@ struct Result
 
     const ResType& unwrap() const
     {
-        // TODO: exception if is not valid?
-        return res;
+        if (isValid())
+            return res;
+        else
+            throw UnwrapException("Unwrap invalid result");
     }
 
     const Err& error() const
