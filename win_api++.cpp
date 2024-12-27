@@ -303,25 +303,57 @@ FileResult readEntireFile(const char* filepath)
     }
 
     auto buffer = ByteBuffer((size_t)filesize.QuadPart, 0xab);
+    LONGLONG offset = 0;
 
-    DWORD bytes_read = 0;
-    success = ReadFile(
-        file_handle,          // [in]                HANDLE       hFile,
-        buffer.data(),        // [out]               LPVOID       lpBuffer,
-        (DWORD)buffer.size(), // [in]                DWORD        nNumberOfBytesToRead,
-        &bytes_read,          // [out, optional]     LPDWORD      lpNumberOfBytesRead,
-        NULL                  // [in, out, optional] LPOVERLAPPED lpOverlapped
-    );
-
-    if ((success == FALSE) or
-        (bytes_read != buffer.size())
-        )
+    while (offset < filesize.QuadPart)
     {
-        auto err = GetLastError();
+        LPVOID data = &buffer[(size_t)offset];
+        LONGLONG bytes_to_read = filesize.QuadPart - offset;
+
+        if (bytes_to_read > 0xffffffffUL)
+        {
+            bytes_to_read = 0xffffffffUL;
+        }
+
+        DWORD bytes_read = 0;
+        success = ReadFile(
+            file_handle,          // [in]                HANDLE       hFile,
+            data,                 // [out]               LPVOID       lpBuffer,
+            (DWORD)bytes_to_read, // [in]                DWORD        nNumberOfBytesToRead,
+            &bytes_read,          // [out, optional]     LPDWORD      lpNumberOfBytesRead,
+            NULL                  // [in, out, optional] LPOVERLAPPED lpOverlapped
+        );
+
+        if (success == FALSE)
+        {
+            auto err = GetLastError();
+            return FileResult(
+                {
+                    .description = lastErrorToStr(err),
+                    .code = err
+                }
+            );
+        }
+
+        if (bytes_read != bytes_to_read)
+        {
+            return FileResult(
+                {
+                    .description = "cannot read all the bytes",
+                    .code = 0xffffffffUL
+                }
+            );
+        }
+
+        offset += bytes_read;
+    }
+
+    if (offset != (LONGLONG)buffer.size())
+    {
         return FileResult(
             {
-                .description = lastErrorToStr(err),
-                .code = err
+                .description = "something went wrong",
+                .code = 0xffffffffUL
             }
         );
     }
