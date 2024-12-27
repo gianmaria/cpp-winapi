@@ -291,34 +291,17 @@ namespace
 
 using namespace WAPP;
 
-// TODO: new defer class
-//template <typename Fn>
-//struct DeleteLater
-//{
-//    Fn fn;
-//    DeleteLater(Fn fn) : fn(fn)
-//    {
-//    }
-//    ~DeleteLater()
-//    {
-//        fn();
-//    }
-//};
-
-class Defer
+template <typename Fn>
+struct Defer
 {
-    std::function<void()> cleanup = nullptr;
+    Fn fn;
 
-public:
-
-    Defer(std::function<void()> func)
-        : cleanup(std::move(func))
+    Defer(Fn fn) : fn(fn)
     {
     }
-
     ~Defer()
     {
-        if (cleanup) cleanup();
+        fn();
     }
 };
 
@@ -507,10 +490,10 @@ ByteBuffer randomBytes(uint32_t count)
         0                        // [in] ULONG dwFlags
     );
 
-    auto close_algo = Defer([&]()
+    Defer close_algo = [&]()
     {
         BCryptCloseAlgorithmProvider(algo_handle, 0);
-    });
+    };
 
     if (status != STATUS_SUCCESS)
     {
@@ -721,10 +704,10 @@ ByteBuffer compress(LPCVOID data, SIZE_T data_size)
         };
     }
 
-    auto close_compressor = Defer([handle]()
+    Defer close_compressor = [handle]()
     {
         CloseCompressor(handle);
-    });
+    };
 
     SIZE_T size_needed = 0;
 
@@ -795,10 +778,10 @@ ByteBuffer decompress(LPCVOID data, SIZE_T data_size)
         };
     }
 
-    auto close_decompressor = Defer([handle]()
+    Defer close_decompressor = [handle]()
     {
         CloseDecompressor(handle);
-    });
+    };
 
     SIZE_T uncompressed_data_size = 0;
 
@@ -872,10 +855,10 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
         );
     }
 
-    auto close_algo = Defer([&]()
+    Defer close_algo = [&]()
     {
         BCryptCloseAlgorithmProvider(algo_handle, 0);
-    });
+    };
 
     ULONG pcbResult = 0; // TODO: not really used at the moment
 
@@ -943,10 +926,10 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
         );
     }
 
-    auto destroy_hash = Defer([&]()
+    Defer destroy_hash = [&]()
     {
         BCryptDestroyHash(hash_handle);
-    });
+    };
 
     // hashing...
     status = BCryptHashData(
@@ -1053,10 +1036,10 @@ static auto derive_key_with_PBKDF2(
         return status;
     }
 
-    auto close_algo = Defer([&]()
+    Defer close_algo = [&]()
     {
         BCryptCloseAlgorithmProvider(algo_handle, 0);
-    });
+    };
 
     // Derive the key
     status = BCryptDeriveKeyPBKDF2(
@@ -1233,14 +1216,14 @@ EncryptionResult encrypt(
         }
     }
 
-    auto close_algo = Defer([&]()
+    Defer close_algo = [&]()
     {
         BCryptCloseAlgorithmProvider(algo_handle, 0);
-    });
-    auto destroy_key = Defer([&]()
+    };
+    Defer destroy_key = [&]()
     {
         BCryptDestroyKey(key_handle);
-    });
+    };
 
     ULONG bytes_copied = 0;
 
@@ -1397,14 +1380,14 @@ DecryptionResult decrypt(
         }
     }
 
-    auto close_algo = Defer([&]()
+    Defer close_algo = [&]()
     {
         BCryptCloseAlgorithmProvider(algo_handle, 0);
-    });
-    auto destroy_key = Defer([&]()
+    };
+    Defer destroy_key = [&]()
     {
         BCryptDestroyKey(key_handle);
-    });
+    };
 
     ULONG bytes_copied = 0;
 
