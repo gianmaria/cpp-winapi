@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
+#include <exception>
 #include <string>
 #include <vector>
 
@@ -18,12 +18,9 @@
 using std::cout;
 using std::cerr;
 using std::endl;
-using std::string;
-using std::wstring;
-using std::string_view;
 using std::vector;
-using std::format;
-using std::array;
+using std::string;
+using std::string_view;
 using std::ifstream;
 
 using namespace std::string_literals;
