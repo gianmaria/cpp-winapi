@@ -160,7 +160,7 @@ string toUTF8(const wchar_t* wide_str)
     }
 
     // Allocate buffer for the converted string
-    std::string utf8_string(buffer_size, '\0');
+    auto utf8_string = string((size_t)buffer_size, '\0');
 
     // Perform the conversion
     int result = WideCharToMultiByte(
