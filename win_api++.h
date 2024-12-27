@@ -54,6 +54,7 @@ namespace WAPP
 using std::string_view;
 using std::string;
 using std::vector;
+using std::format;
 
 using byte = uint8_t;
 using ByteBuffer = vector<byte>;
@@ -138,6 +139,9 @@ ByteBuffer toBB(string_view input);
 string toHexString(const ByteBuffer& data);
 
 ByteBuffer randomBytes(uint32_t count);
+
+using FileResult = Result<ByteBuffer, Error<DWORD>>;
+FileResult readEntireFile(const char* filepath);
 
 using Base64Result = Result<ByteBuffer, Error<DWORD>>;
 

@@ -259,6 +259,76 @@ ByteBuffer randomBytes(uint32_t count)
     return random_data;
 }
 
+FileResult readEntireFile(const char* filepath)
+{
+    // https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page#-a-vs--w-apis
+    HANDLE file_handle = CreateFileA(
+        filepath,              // [in]           LPCSTR                lpFileName,
+        GENERIC_READ,          // [in]           DWORD                 dwDesiredAccess,
+        FILE_SHARE_READ,       // [in]           DWORD                 dwShareMode,
+        nullptr,               // [in, optional] LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+        OPEN_EXISTING,         // [in]           DWORD                 dwCreationDisposition,
+        FILE_ATTRIBUTE_NORMAL, // [in]           DWORD                 dwFlagsAndAttributes,
+        nullptr                // [in, optional] HANDLE                hTemplateFile
+    );
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        auto err = GetLastError();
+        return FileResult(
+            {
+                .description = lastErrorToStr(err),
+                .code = err
+            }
+        );
+    }
+
+    Defer close_handle = [&file_handle]()
+    {
+        CloseHandle(file_handle);
+    };
+
+    LARGE_INTEGER filesize {};
+    bool success = GetFileSizeEx(file_handle, &filesize);
+
+    if (success == FALSE)
+    {
+        auto err = GetLastError();
+        return FileResult(
+            {
+                .description = lastErrorToStr(err),
+                .code = err
+            }
+        );
+    }
+
+    auto buffer = ByteBuffer((size_t)filesize.QuadPart, 0xab);
+
+    DWORD bytes_read = 0;
+    success = ReadFile(
+        file_handle,          // [in]                HANDLE       hFile,
+        buffer.data(),        // [out]               LPVOID       lpBuffer,
+        (DWORD)buffer.size(), // [in]                DWORD        nNumberOfBytesToRead,
+        &bytes_read,          // [out, optional]     LPDWORD      lpNumberOfBytesRead,
+        NULL                  // [in, out, optional] LPOVERLAPPED lpOverlapped
+    );
+
+    if ((success == FALSE) or
+        (bytes_read != buffer.size())
+        )
+    {
+        auto err = GetLastError();
+        return FileResult(
+            {
+                .description = lastErrorToStr(err),
+                .code = err
+            }
+        );
+    }
+
+    return FileResult(std::move(buffer));
+}
+
 Base64Result base64Encode(const BYTE* input, DWORD input_size)
 {
     DWORD output_size = 0;
