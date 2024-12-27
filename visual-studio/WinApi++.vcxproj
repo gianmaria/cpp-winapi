@@ -195,8 +195,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\win_api++.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\win_api++.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\win_api++.h" />
