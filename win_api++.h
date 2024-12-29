@@ -160,6 +160,8 @@ ByteBuffer randomBytes(uint32_t count);
 using FileResult = Result<ByteBuffer, Error<DWORD>>;
 FileResult readEntireFile(const char* filepath);
 
+bool writeContentToFile(const char* filepath);
+
 using Base64Result = Result<ByteBuffer, Error<DWORD>>;
 
 Base64Result base64Encode(const BYTE* input, DWORD input_size);

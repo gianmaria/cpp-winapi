@@ -347,6 +347,49 @@ FileResult readEntireFile(const char* filepath)
     return FileResult::Success(std::move(buffer));
 }
 
+bool writeContentToFile(const char* filepath)
+{
+#if 0
+    DWORD flags_and_attrib = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+    // https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page#-a-vs--w-apis
+    HANDLE file_handle = CreateFileA(
+        filepath,              // [in]           LPCSTR                lpFileName,
+        GENERIC_WRITE,          // [in]           DWORD                 dwDesiredAccess,
+        FILE_SHARE_WRITE,       // [in]           DWORD                 dwShareMode,
+        nullptr,               // [in, optional] LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+        CREATE_NEW,         // [in]           DWORD                 dwCreationDisposition,
+        flags_and_attrib,      // [in]           DWORD                 dwFlagsAndAttributes,
+        nullptr                // [in, optional] HANDLE                hTemplateFile
+    );
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        auto err = GetLastError();
+        return FileResult(
+            {
+                .description = lastErrorToStr(err),
+                .code = err
+            }
+        );
+    }
+
+    Defer close_handle = [&file_handle]()
+    {
+        CloseHandle(file_handle);
+    };
+
+    BOOL success = WriteFile(
+        file_handle, // [in]                HANDLE       hFile,
+        , // [in]                LPCVOID      lpBuffer,
+        , // [in]                DWORD        nNumberOfBytesToWrite,
+        , // [out, optional]     LPDWORD      lpNumberOfBytesWritten,
+          // [in, out, optional] LPOVERLAPPED lpOverlapped
+        )
+
+#endif // 0
+        return false;
+}
+
 Base64Result base64Encode(const BYTE* input, DWORD input_size)
 {
     DWORD output_size = 0;
