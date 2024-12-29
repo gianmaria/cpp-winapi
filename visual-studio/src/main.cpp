@@ -529,6 +529,25 @@ bool testCompressionFile()
     return (memcmp(file_content.data(), decompressed.unwrap().data(), decompressed.unwrap().size()) == 0);
 }
 
+bool testReadBigFile()
+{
+    const char* files[] =
+    {
+        "C:\\Users\\Gianmaria\\AppData\\Local\\Games\\Cyberpunk 2077\\archive\\pc\\content\\lang_it_voice.archive",
+        "C:\\Users\\Gianmaria\\AppData\\Local\\Games\\Ghost of Tsushima DC\\cache_pc\\psarc\\gapack_bitmaps_p.psarc",
+    };
+
+    for (const auto* file : files)
+    {
+        auto file_content = WAPP::Util::readEntireFile(file);
+
+        if (file_content.hasError())
+            return false;
+    }
+
+    return true;
+}
+
 int main()
 {
     // https://gchq.github.io/CyberChef
@@ -537,6 +556,7 @@ int main()
     {
         cout << std::boolalpha;
 
+        //cout << "testReadBigFile:               " << testReadBigFile() << "\n";
         cout << "testEncodeDecodeBase64BinData: " << testEncodeDecodeBase64BinData() << "\n";
         cout << "testEncodeDecodeBase64:        " << testEncodeDecodeBase64() << "\n";
         cout << "testEncodeDecodeBase64File:    " << testEncodeDecodeBase64File() << "\n";
