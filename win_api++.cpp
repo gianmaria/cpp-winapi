@@ -261,6 +261,7 @@ ByteBuffer randomBytes(uint32_t count)
 
 FileResult readEntireFile(const char* filepath)
 {
+    DWORD flags_and_attrib = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
     // https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page#-a-vs--w-apis
     HANDLE file_handle = CreateFileA(
         filepath,              // [in]           LPCSTR                lpFileName,
@@ -268,7 +269,7 @@ FileResult readEntireFile(const char* filepath)
         FILE_SHARE_READ,       // [in]           DWORD                 dwShareMode,
         nullptr,               // [in, optional] LPSECURITY_ATTRIBUTES lpSecurityAttributes,
         OPEN_EXISTING,         // [in]           DWORD                 dwCreationDisposition,
-        FILE_ATTRIBUTE_NORMAL, // [in]           DWORD                 dwFlagsAndAttributes,
+        flags_and_attrib,      // [in]           DWORD                 dwFlagsAndAttributes,
         nullptr                // [in, optional] HANDLE                hTemplateFile
     );
 
