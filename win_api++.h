@@ -62,13 +62,18 @@ using ByteBuffer = vector<byte>;
 template <typename T>
 struct Error
 {
-    string description;
-    T code;
+    Error(const string& desc, T code)
+        : description(desc), code(code)
+    {
+    }
 
     string what() const
     {
         return std::format("{} ({:#x})", description, code);
     }
+
+    string description;
+    T code = 0;
 };
 
 class UnwrapException: public std::exception
@@ -97,6 +102,16 @@ struct Result
     Result(const Err& err) :
         res({}), err(err)
     {
+    }
+
+    static auto resultOK(const ResType& res)
+    {
+        return Result(res, {});
+    }
+
+    static auto resultError(const Err& err)
+    {
+        return Result({}, err);
     }
 
     bool isValid() const

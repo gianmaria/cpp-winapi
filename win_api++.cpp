@@ -295,12 +295,14 @@ FileResult readEntireFile(const char* filepath)
     if (success == FALSE)
     {
         auto err = GetLastError();
-        return FileResult(
-            {
-                .description = lastErrorToStr(err),
-                .code = err
-            }
-        );
+        return FileResult::resultError({lastErrorToStr(err), err});
+
+        //return FileResult(
+        //    {
+        //        .description = lastErrorToStr(err),
+        //        .code = err
+        //    }
+        //);
     }
 
     auto buffer = ByteBuffer((size_t)filesize.QuadPart, 0xab);
