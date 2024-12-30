@@ -533,8 +533,7 @@ bool testReadBigFile()
 {
     const char* files[] =
     {
-        "C:\\Users\\Gianmaria\\AppData\\Local\\Games\\Cyberpunk 2077\\archive\\pc\\content\\lang_it_voice.archive",
-        "C:\\Users\\Gianmaria\\AppData\\Local\\Games\\Ghost of Tsushima DC\\cache_pc\\psarc\\gapack_bitmaps_p.psarc",
+        "big_file.bin"
     };
 
     for (const auto* file : files)
@@ -548,6 +547,22 @@ bool testReadBigFile()
     return true;
 }
 
+bool testWriteBigFile()
+{
+    using namespace WAPP;
+
+    DWORD data_len = 1024UL * 1024UL * 1024UL * 2UL;
+    auto mem = std::make_unique<char[]>(data_len);
+
+    const void* data = mem.get();
+
+    auto res = Util::writeContentToFile("big_file.bin", data, data_len);
+
+    if (res.hasError()) return false;
+
+    return true;
+}
+
 int main()
 {
     // https://gchq.github.io/CyberChef
@@ -556,7 +571,8 @@ int main()
     {
         cout << std::boolalpha;
 
-        //cout << "testReadBigFile:               " << testReadBigFile() << "\n";
+        cout << "testWriteBigFile:              " << testWriteBigFile() << "\n";
+        cout << "testReadBigFile:               " << testReadBigFile() << "\n";
         cout << "testEncodeDecodeBase64BinData: " << testEncodeDecodeBase64BinData() << "\n";
         cout << "testEncodeDecodeBase64:        " << testEncodeDecodeBase64() << "\n";
         cout << "testEncodeDecodeBase64File:    " << testEncodeDecodeBase64File() << "\n";
