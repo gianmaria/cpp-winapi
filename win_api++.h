@@ -157,10 +157,10 @@ string toHexString(const ByteBuffer& data);
 
 ByteBuffer randomBytes(uint32_t count);
 
-using FileResult = Result<ByteBuffer, Error<DWORD>>;
-FileResult readEntireFile(const char* filepath);
-
-bool writeContentToFile(const char* filepath);
+using ReadResult = Result<ByteBuffer, Error<DWORD>>;
+ReadResult readEntireFile(const char* filepath);
+using WriteResult = Result<bool, Error<DWORD>>;
+WriteResult writeContentToFile(const char* filepath, LPCVOID data, DWORD data_len);
 
 using Base64Result = Result<ByteBuffer, Error<DWORD>>;
 
