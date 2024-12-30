@@ -29,42 +29,16 @@ using namespace std::string_view_literals;
 namespace fs = std::filesystem;
 
 
-WAPP::ByteBuffer readEntireFile(string_view file_path)
-{
-    fs::path p1 = file_path;
-    // Open file in binary mode
-    auto file = ifstream(p1, std::ios::binary);
-    if (!file)
-    {
-        auto msg = format("Failed to open file: {}", file_path);
-        throw std::runtime_error(msg);
-    }
-
-    // Move the file pointer to the end to get the size
-    file.seekg(0, std::ios::end);
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    // Read the file contents into a vector
-    std::vector<unsigned char> buffer((const unsigned __int64)size);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), size))
-    {
-        throw std::runtime_error("Failed to read file: ");
-    }
-
-    return buffer;
-}
-
 bool testEncodeDecodeBase64File()
 {
     using namespace WAPP;
-    auto file_data = readEntireFile("C:\\Windows\\System32\\calc.exe");
+    auto file_data = Util::readEntireFile("C:\\Windows\\System32\\calc.exe");
 
     // calculate sha256 file
-    auto hash_original = SHA256::generate(file_data);
+    auto hash_original = SHA256::generate(file_data.unwrap());
 
     // encrypt file
-    auto ciphertext = AES256_GCM::encrypt(file_data, "Passw0rd", {});
+    auto ciphertext = AES256_GCM::encrypt(file_data.unwrap(), "Passw0rd", {});
 
     // decrypt file
     auto plaintext = AES256_GCM::decrypt(ciphertext.unwrap(), "Passw0rd");
@@ -341,7 +315,7 @@ bool testAES()
         string_view pwd = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         string_view aad = "windows calc.exe";
 
-        auto enc_res = AES256_GCM::encrypt(toSv(msg), pwd, aad);
+        auto enc_res = AES256_GCM::encrypt(toSv(msg.unwrap()), pwd, aad);
 
         if (enc_res.hasError())
         {
@@ -355,7 +329,7 @@ bool testAES()
             return false;
         }
 
-        auto original_msg = base64Encode(SHA256::generate(msg).unwrap());
+        auto original_msg = base64Encode(SHA256::generate(msg.unwrap()).unwrap());
         if (original_msg.hasError()) return false;
 
         auto decrypt_msg = base64Encode(SHA256::generate(dec_res.unwrap().plaintext).unwrap());
@@ -403,7 +377,7 @@ bool testEncryptFile()
     auto encrypted_filename = "calc.exe.txt";
     auto decrypted_filename = "calc.exe";
 
-    auto file_content = readEntireFile(filename);
+    auto file_content = readEntireFile(filename).unwrap();
 
     auto sha_original_file = SHA256::generate(file_content);
 
@@ -426,7 +400,7 @@ bool testEncryptFile()
     //cout << endl;
 
     {
-        auto encrypted_file_content = readEntireFile(encrypted_filename);
+        auto encrypted_file_content = readEntireFile(encrypted_filename).unwrap();
 
         auto base64_lines = split_string(toSv(encrypted_file_content));
 
@@ -544,7 +518,7 @@ bool testCompression()
 
 bool testCompressionFile()
 {
-    auto file_content = readEntireFile("C:\\Windows\\System32\\calc.exe");
+    auto file_content = WAPP::Util::readEntireFile("C:\\Windows\\System32\\calc.exe").unwrap();
 
     auto compressed = WAPP::Util::compress(file_content.data(), file_content.size());
     auto decompressed = WAPP::Util::decompress(compressed.unwrap().data(), compressed.unwrap().size());
@@ -555,6 +529,25 @@ bool testCompressionFile()
     return (memcmp(file_content.data(), decompressed.unwrap().data(), decompressed.unwrap().size()) == 0);
 }
 
+bool testReadBigFile()
+{
+    const char* files[] =
+    {
+        "C:\\Users\\Gianmaria\\AppData\\Local\\Games\\Cyberpunk 2077\\archive\\pc\\content\\lang_it_voice.archive",
+        "C:\\Users\\Gianmaria\\AppData\\Local\\Games\\Ghost of Tsushima DC\\cache_pc\\psarc\\gapack_bitmaps_p.psarc",
+    };
+
+    for (const auto* file : files)
+    {
+        auto file_content = WAPP::Util::readEntireFile(file);
+
+        if (file_content.hasError())
+            return false;
+    }
+
+    return true;
+}
+
 int main()
 {
     // https://gchq.github.io/CyberChef
@@ -563,6 +556,7 @@ int main()
     {
         cout << std::boolalpha;
 
+        //cout << "testReadBigFile:               " << testReadBigFile() << "\n";
         cout << "testEncodeDecodeBase64BinData: " << testEncodeDecodeBase64BinData() << "\n";
         cout << "testEncodeDecodeBase64:        " << testEncodeDecodeBase64() << "\n";
         cout << "testEncodeDecodeBase64File:    " << testEncodeDecodeBase64File() << "\n";
@@ -577,7 +571,7 @@ int main()
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "[EXCEPTION]: " << ex.what() << endl;
+        std::cerr << "[EXCEPTION] " << ex.what() << endl;
     }
 
     return 1;

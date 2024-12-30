@@ -259,6 +259,109 @@ ByteBuffer randomBytes(uint32_t count)
     return random_data;
 }
 
+FileResult readEntireFile(const char* filepath)
+{
+    DWORD flags_and_attrib = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+    // https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page#-a-vs--w-apis
+    HANDLE file_handle = CreateFileA(
+        filepath,              // [in]           LPCSTR                lpFileName,
+        GENERIC_READ,          // [in]           DWORD                 dwDesiredAccess,
+        FILE_SHARE_READ,       // [in]           DWORD                 dwShareMode,
+        nullptr,               // [in, optional] LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+        OPEN_EXISTING,         // [in]           DWORD                 dwCreationDisposition,
+        flags_and_attrib,      // [in]           DWORD                 dwFlagsAndAttributes,
+        nullptr                // [in, optional] HANDLE                hTemplateFile
+    );
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        auto err = GetLastError();
+        return FileResult(
+            {
+                .description = lastErrorToStr(err),
+                .code = err
+            }
+        );
+    }
+
+    Defer close_handle = [&file_handle]()
+    {
+        CloseHandle(file_handle);
+    };
+
+    LARGE_INTEGER filesize {};
+    bool success = GetFileSizeEx(file_handle, &filesize);
+
+    if (success == FALSE)
+    {
+        auto err = GetLastError();
+        return FileResult(
+            {
+                .description = lastErrorToStr(err),
+                .code = err
+            }
+        );
+    }
+
+    auto buffer = ByteBuffer((size_t)filesize.QuadPart, 0xab);
+    LONGLONG offset = 0;
+
+    while (offset < filesize.QuadPart)
+    {
+        LPVOID data = &buffer[(size_t)offset];
+        LONGLONG bytes_to_read = filesize.QuadPart - offset;
+
+        if (bytes_to_read > 0xffffffffUL)
+        {
+            bytes_to_read = 0xffffffffUL;
+        }
+
+        DWORD bytes_read = 0;
+        success = ReadFile(
+            file_handle,          // [in]                HANDLE       hFile,
+            data,                 // [out]               LPVOID       lpBuffer,
+            (DWORD)bytes_to_read, // [in]                DWORD        nNumberOfBytesToRead,
+            &bytes_read,          // [out, optional]     LPDWORD      lpNumberOfBytesRead,
+            NULL                  // [in, out, optional] LPOVERLAPPED lpOverlapped
+        );
+
+        if (success == FALSE)
+        {
+            auto err = GetLastError();
+            return FileResult(
+                {
+                    .description = lastErrorToStr(err),
+                    .code = err
+                }
+            );
+        }
+
+        if (bytes_read != bytes_to_read)
+        {
+            return FileResult(
+                {
+                    .description = "cannot read all the bytes",
+                    .code = 0xffffffffUL
+                }
+            );
+        }
+
+        offset += bytes_read;
+    }
+
+    if (offset != (LONGLONG)buffer.size())
+    {
+        return FileResult(
+            {
+                .description = "something went wrong",
+                .code = 0xffffffffUL
+            }
+        );
+    }
+
+    return FileResult(std::move(buffer));
+}
+
 Base64Result base64Encode(const BYTE* input, DWORD input_size)
 {
     DWORD output_size = 0;
