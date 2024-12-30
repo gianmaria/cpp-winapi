@@ -72,6 +72,12 @@ struct Error
         return std::format("{} ({:#x})", description, code);
     }
 
+    Error() = default;
+    Error(const Error& other) = default;
+    Error(Error&& other) noexcept = default;
+    Error& operator=(const Error& other) = default;
+    Error& operator=(Error&& other) noexcept = default;
+
     string description;
     T code = 0;
 };
@@ -94,22 +100,18 @@ struct Result
     {
     }
 
-    Result(const ResType& res) :
-        res(res), err({})
-    {
-    }
+    Result() = default;
+    Result(const Result& other) = default;
+    Result(Result&& other) noexcept = default;
+    Result& operator=(const Result& other) = default;
+    Result& operator=(Result&& other) noexcept = default;
 
-    Result(const Err& err) :
-        res({}), err(err)
-    {
-    }
-
-    static auto resultOK(const ResType& res)
+    static auto Success(const ResType& res)
     {
         return Result(res, {});
     }
 
-    static auto resultError(const Err& err)
+    static auto Error(const Err& err)
     {
         return Result({}, err);
     }
@@ -240,13 +242,6 @@ EncryptionResult encrypt(
 struct Decryption
 {
     ByteBuffer plaintext;
-
-    template<typename T>
-    const T as() const
-    {
-        return reinterpret_cast<T>(plaintext.data());
-    }
-
 };
 
 using DecryptionResult = Result<Decryption, Error<NTSTATUS>>;

@@ -276,12 +276,7 @@ FileResult readEntireFile(const char* filepath)
     if (file_handle == INVALID_HANDLE_VALUE)
     {
         auto err = GetLastError();
-        return FileResult(
-            {
-                .description = lastErrorToStr(err),
-                .code = err
-            }
-        );
+        return FileResult::Error({lastErrorToStr(err),err});
     }
 
     Defer close_handle = [&file_handle]()
@@ -295,14 +290,7 @@ FileResult readEntireFile(const char* filepath)
     if (success == FALSE)
     {
         auto err = GetLastError();
-        return FileResult::resultError({lastErrorToStr(err), err});
-
-        //return FileResult(
-        //    {
-        //        .description = lastErrorToStr(err),
-        //        .code = err
-        //    }
-        //);
+        return FileResult::Error({lastErrorToStr(err), err});
     }
 
     auto buffer = ByteBuffer((size_t)filesize.QuadPart, 0xab);
@@ -330,20 +318,15 @@ FileResult readEntireFile(const char* filepath)
         if (success == FALSE)
         {
             auto err = GetLastError();
-            return FileResult(
-                {
-                    .description = lastErrorToStr(err),
-                    .code = err
-                }
-            );
+            return FileResult::Error({lastErrorToStr(err),err});
         }
 
         if (bytes_read != bytes_to_read)
         {
-            return FileResult(
+            return FileResult::Error(
                 {
-                    .description = "cannot read all the bytes",
-                    .code = 0xffffffffUL
+                    "cannot read all the bytes",
+                    0xffffffffUL
                 }
             );
         }
@@ -353,15 +336,15 @@ FileResult readEntireFile(const char* filepath)
 
     if (offset != (LONGLONG)buffer.size())
     {
-        return FileResult(
+        return FileResult::Error(
             {
-                .description = "something went wrong",
-                .code = 0xffffffffUL
+                "something went wrong",
+                0xffffffffUL
             }
         );
     }
 
-    return FileResult(std::move(buffer));
+    return FileResult::Success(std::move(buffer));
 }
 
 Base64Result base64Encode(const BYTE* input, DWORD input_size)
@@ -379,11 +362,8 @@ Base64Result base64Encode(const BYTE* input, DWORD input_size)
 
     if (result == FALSE)
     {
-        DWORD last_err = GetLastError();
-
-        return Base64Result(
-            {.description = lastErrorToStr(last_err), .code = last_err}
-        );
+        DWORD err = GetLastError();
+        return Base64Result::Error({lastErrorToStr(err),err});
     }
 
     // NOTE: output_size include the terminating null character
@@ -403,15 +383,13 @@ Base64Result base64Encode(const BYTE* input, DWORD input_size)
 
     if (result == FALSE)
     {
-        DWORD last_err = GetLastError();
-        return Base64Result(
-            {.description = lastErrorToStr(last_err), .code = last_err}
-        );
+        DWORD err = GetLastError();
+        return Base64Result::Error({lastErrorToStr(err),err});
     }
 
     output.pop_back(); // remove terminating null character
 
-    return Base64Result(std::move(output));
+    return Base64Result::Success(std::move(output));
 }
 
 Base64Result base64Encode(const ByteBuffer& input)
@@ -461,10 +439,8 @@ Base64Result base64Decode(LPCSTR input, DWORD input_size)
 
     if (result == FALSE)
     {
-        DWORD last_err = GetLastError();
-        return Base64Result(
-            {.description = lastErrorToStr(last_err), .code = last_err}
-        );
+        DWORD err = GetLastError();
+        return Base64Result::Error({lastErrorToStr(err),err});
     }
 
     auto output = ByteBuffer(output_size, 0xba);
@@ -483,13 +459,11 @@ Base64Result base64Decode(LPCSTR input, DWORD input_size)
 
     if (result == FALSE)
     {
-        DWORD last_err = GetLastError();
-        return Base64Result(
-            {.description = lastErrorToStr(last_err), .code = last_err}
-        );
+        DWORD err = GetLastError();
+        return Base64Result::Error({lastErrorToStr(err),err});
     }
 
-    return Base64Result(std::move(output));
+    return Base64Result::Success(std::move(output));
 }
 
 Base64Result base64Decode(const ByteBuffer& input)
@@ -524,7 +498,7 @@ Base64Result base64Decode(const char* input)
 
 CompressionResult compress(LPCVOID data, SIZE_T data_size)
 {
-    DWORD error_code = 0;
+    DWORD err = 0;
     COMPRESSOR_HANDLE handle = nullptr;
     BOOL res = FALSE;
 
@@ -536,10 +510,8 @@ CompressionResult compress(LPCVOID data, SIZE_T data_size)
 
     if (res == FALSE)
     {
-        error_code = GetLastError();
-        return CompressionResult(
-            {.description = lastErrorToStr(error_code), .code = error_code}
-        );
+        err = GetLastError();
+        return CompressionResult::Error({lastErrorToStr(err),err});
     }
 
     Defer close_compressor = [handle]()
@@ -559,13 +531,11 @@ CompressionResult compress(LPCVOID data, SIZE_T data_size)
     );
 
     // we expect to get ERROR_INSUFFICIENT_BUFFER here
-    error_code = GetLastError();
+    err = GetLastError();
     if (res == FALSE and
-        error_code != ERROR_INSUFFICIENT_BUFFER)
+        err != ERROR_INSUFFICIENT_BUFFER)
     {
-        return CompressionResult(
-            {.description = lastErrorToStr(error_code), .code = error_code}
-        );
+        return CompressionResult::Error({lastErrorToStr(err),err});
     }
 
     auto compressed_data = ByteBuffer(size_needed);
@@ -582,20 +552,18 @@ CompressionResult compress(LPCVOID data, SIZE_T data_size)
 
     if (res == FALSE)
     {
-        error_code = GetLastError();
-        return CompressionResult(
-            {.description = lastErrorToStr(error_code), .code = error_code}
-        );
+        err = GetLastError();
+        return CompressionResult::Error({lastErrorToStr(err),err});
     }
 
     compressed_data.resize(actual_compressed_size);
 
-    return CompressionResult(compressed_data);
+    return CompressionResult::Success(std::move(compressed_data));
 }
 
 CompressionResult decompress(LPCVOID data, SIZE_T data_size)
 {
-    DWORD error_code = 0;
+    DWORD err = 0;
     DECOMPRESSOR_HANDLE handle = nullptr;
     BOOL res = FALSE;
 
@@ -607,10 +575,8 @@ CompressionResult decompress(LPCVOID data, SIZE_T data_size)
 
     if (res == FALSE)
     {
-        error_code = GetLastError();
-        return CompressionResult(
-            {.description = lastErrorToStr(error_code), .code = error_code}
-        );
+        err = GetLastError();
+        return CompressionResult::Error({lastErrorToStr(err),err});
     }
 
     Defer close_decompressor = [handle]()
@@ -630,13 +596,11 @@ CompressionResult decompress(LPCVOID data, SIZE_T data_size)
     );
 
     // we expect to get ERROR_INSUFFICIENT_BUFFER here
-    error_code = GetLastError();
+    err = GetLastError();
     if (res == FALSE and
-        error_code != ERROR_INSUFFICIENT_BUFFER)
+        err != ERROR_INSUFFICIENT_BUFFER)
     {
-        return CompressionResult(
-            {.description = lastErrorToStr(error_code), .code = error_code}
-        );
+        return CompressionResult::Error({lastErrorToStr(err),err});
     }
 
     auto uncompressed_data = ByteBuffer(uncompressed_data_size);
@@ -652,15 +616,13 @@ CompressionResult decompress(LPCVOID data, SIZE_T data_size)
 
     if (res == FALSE)
     {
-        error_code = GetLastError();
-        return CompressionResult(
-            {.description = lastErrorToStr(error_code), .code = error_code}
-        );
+        err = GetLastError();
+        return CompressionResult::Error({lastErrorToStr(err),err});
     }
 
     uncompressed_data.resize(uncompressed_data_size);
 
-    return CompressionResult(uncompressed_data);
+    return CompressionResult::Success(std::move(uncompressed_data));
 }
 
 } // Util namespace
@@ -682,9 +644,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
 
     if (status != STATUS_SUCCESS)
     {
-        return SHA256Result(
-            {.description = ntstatusToStr(status), .code = status}
-        );
+        return SHA256Result::Error({ntstatusToStr(status),status});
     }
 
     Defer close_algo = [&]()
@@ -707,9 +667,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
 
     if (status != STATUS_SUCCESS)
     {
-        return SHA256Result(
-            {.description = ntstatusToStr(status), .code = status}
-        );
+        return SHA256Result::Error({ntstatusToStr(status),status});
     }
 
     auto hash = ByteBuffer(hash_size, 0xba);
@@ -728,9 +686,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
 
     if (status != STATUS_SUCCESS)
     {
-        return SHA256Result(
-            {.description = ntstatusToStr(status), .code = status}
-        );
+        return SHA256Result::Error({ntstatusToStr(status),status});
     }
 
     auto bcrypt_object = std::make_unique<UCHAR[]>(object_size);
@@ -750,9 +706,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
 
     if (status != STATUS_SUCCESS)
     {
-        return SHA256Result(
-            {.description = ntstatusToStr(status), .code = status}
-        );
+        return SHA256Result::Error({ntstatusToStr(status),status});
     }
 
     Defer destroy_hash = [&]()
@@ -770,9 +724,7 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
 
     if (status != STATUS_SUCCESS)
     {
-        return SHA256Result(
-            {.description = ntstatusToStr(status), .code = status}
-        );
+        return SHA256Result::Error({ntstatusToStr(status),status});
     }
 
     // Finish hashing
@@ -785,12 +737,10 @@ SHA256Result generate(PUCHAR data, ULONG data_size)
 
     if (status != STATUS_SUCCESS)
     {
-        return SHA256Result(
-            {.description = ntstatusToStr(status), .code = status}
-        );
+        return SHA256Result::Error({ntstatusToStr(status),status});
     }
 
-    return SHA256Result(hash, {});
+    return SHA256Result::Success(std::move(hash));
 }
 SHA256Result generate(const ByteBuffer& input)
 {
@@ -1003,9 +953,7 @@ EncryptionResult encrypt(
 
         if (PBKDF2_status != STATUS_SUCCESS)
         {
-            return EncryptionResult(
-                {.description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status}
-            );
+            return EncryptionResult::Error({ntstatusToStr(PBKDF2_status),PBKDF2_status});
         }
     }
 
@@ -1035,9 +983,7 @@ EncryptionResult encrypt(
 
         if (common_status != STATUS_SUCCESS)
         {
-            return EncryptionResult(
-                {.description = ntstatusToStr(common_status), .code = common_status}
-            );
+            return EncryptionResult::Error({ntstatusToStr(common_status),common_status});
         }
     }
 
@@ -1070,13 +1016,11 @@ EncryptionResult encrypt(
         if (encrypt_status != STATUS_SUCCESS or
             bytes_copied != plaintext_size)
         {
-            return EncryptionResult(
-                {.description = ntstatusToStr(encrypt_status), .code = encrypt_status}
-            );
+            return EncryptionResult::Error({ntstatusToStr(encrypt_status),encrypt_status});
         }
     }
 
-    return EncryptionResult(
+    return EncryptionResult::Success(
         {
             .ciphertext = ciphertext,
             .nonce = nonce,
@@ -1165,9 +1109,7 @@ DecryptionResult decrypt(
 
         if (PBKDF2_status != STATUS_SUCCESS)
         {
-            return DecryptionResult(
-                {.description = ntstatusToStr(PBKDF2_status), .code = PBKDF2_status}
-            );
+            return DecryptionResult::Error({ntstatusToStr(PBKDF2_status),PBKDF2_status});
         }
     }
 
@@ -1195,9 +1137,7 @@ DecryptionResult decrypt(
 
         if (common_status != STATUS_SUCCESS)
         {
-            return DecryptionResult(
-                {.description = ntstatusToStr(common_status), .code = common_status}
-            );
+            return DecryptionResult::Error({ntstatusToStr(common_status),common_status});
         }
     }
 
@@ -1230,14 +1170,12 @@ DecryptionResult decrypt(
         if (decrypt_status != STATUS_SUCCESS or
             bytes_copied != plaintext.size())
         {
-            return DecryptionResult(
-                {.description = ntstatusToStr(decrypt_status), .code = decrypt_status}
-            );
+            return DecryptionResult::Error({ntstatusToStr(decrypt_status),decrypt_status});
         }
     }
 
-    return DecryptionResult(
-        {.plaintext = plaintext}
+    return DecryptionResult::Success(
+        {.plaintext = std::move(plaintext)}
     );
 }
 
