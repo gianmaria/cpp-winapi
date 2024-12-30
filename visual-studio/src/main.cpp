@@ -468,7 +468,7 @@ bool testUnusualEncryption()
     auto res_decrypted = decrypt(res_encrypted.unwrap(), "password");
     if (res_decrypted.hasError()) return false;
 
-    auto nums2 = res_decrypted.unwrap().as<const int*>();
+    auto nums2 = reinterpret_cast<const int*>(res_decrypted.unwrap().plaintext.data());
 
     return (memcmp(nums, nums2, sizeof(nums)) == 0);
 }

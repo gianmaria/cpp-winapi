@@ -62,13 +62,24 @@ using ByteBuffer = vector<byte>;
 template <typename T>
 struct Error
 {
-    string description;
-    T code;
+    Error(const string& desc, T code)
+        : description(desc), code(code)
+    {
+    }
 
     string what() const
     {
         return std::format("{} ({:#x})", description, code);
     }
+
+    Error() = default;
+    Error(const Error& other) = default;
+    Error(Error&& other) noexcept = default;
+    Error& operator=(const Error& other) = default;
+    Error& operator=(Error&& other) noexcept = default;
+
+    string description;
+    T code = 0;
 };
 
 class UnwrapException: public std::exception
@@ -89,14 +100,20 @@ struct Result
     {
     }
 
-    Result(const ResType& res) :
-        res(res), err({})
+    Result() = default;
+    Result(const Result& other) = default;
+    Result(Result&& other) noexcept = default;
+    Result& operator=(const Result& other) = default;
+    Result& operator=(Result&& other) noexcept = default;
+
+    static auto Success(const ResType& res)
     {
+        return Result(res, {});
     }
 
-    Result(const Err& err) :
-        res({}), err(err)
+    static auto Error(const Err& err)
     {
+        return Result({}, err);
     }
 
     bool isValid() const
@@ -225,13 +242,6 @@ EncryptionResult encrypt(
 struct Decryption
 {
     ByteBuffer plaintext;
-
-    template<typename T>
-    const T as() const
-    {
-        return reinterpret_cast<T>(plaintext.data());
-    }
-
 };
 
 using DecryptionResult = Result<Decryption, Error<NTSTATUS>>;
