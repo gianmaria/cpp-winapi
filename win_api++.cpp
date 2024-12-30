@@ -259,7 +259,7 @@ ByteBuffer randomBytes(uint32_t count)
     return random_data;
 }
 
-FileResult readEntireFile(const char* filepath)
+ReadResult readEntireFile(const char* filepath)
 {
     DWORD flags_and_attrib = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
     // https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page#-a-vs--w-apis
@@ -276,7 +276,7 @@ FileResult readEntireFile(const char* filepath)
     if (file_handle == INVALID_HANDLE_VALUE)
     {
         auto err = GetLastError();
-        return FileResult::Error({lastErrorToStr(err),err});
+        return ReadResult::Error({lastErrorToStr(err),err});
     }
 
     Defer close_handle = [&file_handle]()
@@ -290,7 +290,7 @@ FileResult readEntireFile(const char* filepath)
     if (success == FALSE)
     {
         auto err = GetLastError();
-        return FileResult::Error({lastErrorToStr(err), err});
+        return ReadResult::Error({lastErrorToStr(err), err});
     }
 
     auto buffer = ByteBuffer((size_t)filesize.QuadPart, 0xab);
@@ -318,17 +318,12 @@ FileResult readEntireFile(const char* filepath)
         if (success == FALSE)
         {
             auto err = GetLastError();
-            return FileResult::Error({lastErrorToStr(err),err});
+            return ReadResult::Error({lastErrorToStr(err),err});
         }
 
         if (bytes_read != bytes_to_read)
         {
-            return FileResult::Error(
-                {
-                    "cannot read all the bytes",
-                    0xffffffffUL
-                }
-            );
+            return ReadResult::Error({"cannot read all the bytes", 0xffffffffUL});
         }
 
         offset += bytes_read;
@@ -336,15 +331,53 @@ FileResult readEntireFile(const char* filepath)
 
     if (offset != (LONGLONG)buffer.size())
     {
-        return FileResult::Error(
-            {
-                "something went wrong",
-                0xffffffffUL
-            }
-        );
+        return ReadResult::Error({"something went wrong",0xffffffffUL});
     }
 
-    return FileResult::Success(std::move(buffer));
+    return ReadResult::Success(std::move(buffer));
+}
+
+WriteResult writeContentToFile(const char* filepath, LPCVOID data, DWORD data_len)
+{
+    DWORD flags_and_attrib = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN;
+    // https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page#-a-vs--w-apis
+    HANDLE file_handle = CreateFileA(
+        filepath,              // [in]           LPCSTR                lpFileName,
+        GENERIC_WRITE,          // [in]           DWORD                 dwDesiredAccess,
+        FILE_SHARE_WRITE,       // [in]           DWORD                 dwShareMode,
+        nullptr,               // [in, optional] LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+        CREATE_NEW,         // [in]           DWORD                 dwCreationDisposition,
+        flags_and_attrib,      // [in]           DWORD                 dwFlagsAndAttributes,
+        nullptr                // [in, optional] HANDLE                hTemplateFile
+    );
+
+    if (file_handle == INVALID_HANDLE_VALUE)
+    {
+        auto err = GetLastError();
+        return WriteResult(false, {lastErrorToStr(err), err});
+    }
+
+    Defer close_handle = [&file_handle]()
+    {
+        CloseHandle(file_handle);
+    };
+
+    DWORD bytes_written = 0;
+    BOOL success = WriteFile(
+        file_handle,    // [in]                HANDLE       hFile,
+        data,           // [in]                LPCVOID      lpBuffer,
+        data_len,       // [in]                DWORD        nNumberOfBytesToWrite,
+        &bytes_written, // [out, optional]     LPDWORD      lpNumberOfBytesWritten,
+        nullptr         // [in, out, optional] LPOVERLAPPED lpOverlapped
+    );
+
+    if (success == FALSE || bytes_written != data_len)
+    {
+        auto err = GetLastError();
+        return WriteResult(false, {lastErrorToStr(err), err});
+    }
+
+    return WriteResult(true, {});
 }
 
 Base64Result base64Encode(const BYTE* input, DWORD input_size)

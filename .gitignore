@@ -1,3 +1,4 @@
 ﻿.vs
 *.exe
 visual-studio/calc.exe.txt
+*.bin
